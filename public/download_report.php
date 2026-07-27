@@ -1,11 +1,11 @@
 <?php
 // download_report.php - Path Traversal Vulnerability
 $file = $_GET['file'] ?? 'report.pdf';
-$path = "/srv/labs/lab01/public/reports/" . $file;
+$path = "/srv/labs/lab01/data/reports/" . $file;
 
 if (!file_exists($path)) {
-    // Development/testing fallback if environment is running locally before deployment to /srv/labs/lab01/public
-    $path = __DIR__ . "/reports/" . $file;
+    // Development/testing fallback if running locally before system deployment
+    $path = __DIR__ . "/../data/reports/" . $file;
 }
 
 if (file_exists($path)) {

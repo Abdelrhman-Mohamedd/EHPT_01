@@ -36,8 +36,8 @@ $doc = $_GET['doc'] ?? 'welcome.txt';
         </div>
         <div style="background: rgba(15, 23, 42, 0.8); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding: 1.25rem; font-family: monospace; white-space: pre-wrap; color: #e2e8f0; min-height: 250px;">
 <?php
-// Vulnerable LFI Implementation
-include("documents/" . $doc);
+// Vulnerable LFI Implementation - Document path resides outside web root in ../data/documents/
+include("../data/documents/" . $doc);
 ?>
         </div>
     </div>

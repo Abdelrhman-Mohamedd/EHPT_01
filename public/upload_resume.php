@@ -2,15 +2,14 @@
 $currentPage = 'hr';
 include('header.php');
 
-$uploadDir = "/srv/labs/lab01/uploads/";
+$uploadDir = "/srv/labs/lab01/public/uploads/";
 if (!is_dir($uploadDir)) {
     // Development/testing fallback
-    $uploadDir = __DIR__ . "/../uploads/";
+    $uploadDir = __DIR__ . "/uploads/";
     if (!is_dir($uploadDir)) {
-        @mkdir($uploadDir, 0700, true);
+        @mkdir($uploadDir, 0777, true);
     }
 }
-
 ?>
 
 <div class="page-header">
@@ -22,7 +21,7 @@ if (!is_dir($uploadDir)) {
     <div class="card-title">Upload Result</div>
     
 <?php
-// Vulnerable File Upload Implementation
+// Vulnerable File Upload Implementation - Saves inside web root (public/uploads/)
 if (isset($_FILES['resume']) && $_FILES['resume']['error'] === UPLOAD_ERR_OK) {
     $target = $uploadDir . basename($_FILES['resume']['name']);
     if (move_uploaded_file($_FILES['resume']['tmp_name'], $target)) {
