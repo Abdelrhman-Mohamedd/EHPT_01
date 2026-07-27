@@ -1,0 +1,10 @@
+NexaCorp Corporate Data & Acceptable Use Policy 2026
+
+1. Intellectual Property
+All code, system designs, and internal documentation created by employees remain the sole property of NexaCorp.
+
+2. Access Control
+Access to server configuration files (/etc/passwd, /etc/php-fpm.d) is strictly forbidden for standard users.
+
+3. Monitoring
+All requests to http://employeeportal.local:8081 are logged and audited.

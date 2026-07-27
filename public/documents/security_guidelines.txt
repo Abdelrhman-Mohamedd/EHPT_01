@@ -1,0 +1,9 @@
+=== NexaCorp Information Security Guidelines ===
+
+1. Passwords must be at least 12 characters and changed every 90 days.
+2. Remote access is strictly permitted through official VPN connections only.
+3. System administrators must monitor PHP-FPM pool logs regularly.
+4. Open ports and diagnostic endpoints are restricted to authorized subnets.
+
+Internal Flag for Lab 1 LFI Verification:
+FLAG{LFI_LOCAL_FILE_INCLUSION_SUCCESS_LAB01}

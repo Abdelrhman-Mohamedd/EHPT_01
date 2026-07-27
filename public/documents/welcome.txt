@@ -1,0 +1,13 @@
+=== NexaCorp Employee Onboarding & Portal Guide ===
+
+Welcome to NexaCorp!
+
+This internal portal allows employees to access core administrative tools, request IT support, view corporate policies, and submit human resources documentation.
+
+Key Guidelines:
+1. Always keep your employee credentials secure.
+2. Store documents according to corporate classification rules.
+3. For network troubleshooting, use the IT Tools section.
+4. Upload all annual performance evaluations via the HR Portal.
+
+Contact: it-support@nexacorp.local
