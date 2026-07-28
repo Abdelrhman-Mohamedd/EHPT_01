@@ -21,6 +21,15 @@ for arg in "$@"; do
     fi
 done
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Guard against running setup.sh inside the deployment target /srv/labs/lab01
+if [ "$SCRIPT_DIR" == "/srv/labs/lab01" ]; then
+    echo "[-] Warning: Running setup.sh from within /srv/labs/lab01."
+    echo "    Please clone the repository to a separate source directory (e.g. ~/EHPT_01) and run setup.sh from there."
+    exit 1
+fi
+
 echo "=============================================================================="
 echo "[🔒] Personalizing & Hardening Lab 01 VM for Student ID: ${STUDENT_ID}"
 echo "=============================================================================="
@@ -42,8 +51,6 @@ fi
 
 echo "[+] Step 2: Provisioning directory structure under /srv/labs/lab01..."
 mkdir -p /srv/labs/lab01/{public,data,public/uploads,sessions}
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[+] Step 3: Copying application public and data files..."
 cp -r "${SCRIPT_DIR}/public/"* /srv/labs/lab01/public/
@@ -104,19 +111,19 @@ FLAG_UPLOAD=FLAG{${FLAG_UPLOAD}}
 FLAG_CMDI=FLAG{${FLAG_CMDI}}
 EOF
 
-echo "[+] Step 6: Hardening file system ownership & access control (Anti-Tamper)..."
-# Group membership for web server process
+echo "[+] Step 6: Setting directory ownership & access permissions..."
+# Add web server user (apache / www-data) to lab01 group for traversal
 if id -u apache >/dev/null 2>&1; then
     usermod -aG lab01 apache
 elif id -u www-data >/dev/null 2>&1; then
     usermod -aG lab01 www-data
 fi
 
-# Ownership set to root:lab01 to prevent modification by web user lab01 or local unprivileged users
+# Ownership: root:lab01
 chown -R root:lab01 /srv/labs/lab01
 
 # Permissions:
-# Root has full access (7), lab01 service has read/exec (5), Others have NO ACCESS (0)
+# Root directory /srv/labs/lab01 MUST be 750 (not 700) so apache group member can traverse to public/
 chmod 750 /srv/labs/lab01 /srv/labs/lab01/public /srv/labs/lab01/data /srv/labs/lab01/sessions
 chmod 700 /srv/labs/lab01/.buildinfo
 
@@ -129,7 +136,26 @@ chown -R lab01:lab01 /srv/labs/lab01/public/uploads
 chmod 770 /srv/labs/lab01/public/uploads
 chmod 644 /srv/labs/lab01/public/uploads/.upload_marker /srv/labs/lab01/public/uploads/.rfi_marker
 
-echo "[+] Step 7: Setting Hostname & Appliance Boot Banner..."
+echo "[+] Step 7: Configuring SELinux Policy & Port 8081 Binding..."
+if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" != "Disabled" ]; then
+    echo "    Applying SELinux booleans and file/port context labels..."
+    setsebool -P httpd_can_network_connect 1 2>/dev/null || true
+
+    if command -v semanage >/dev/null 2>&1; then
+        # Modify or add port 8081 to http_port_t SELinux label
+        semanage port -m -t http_port_t -p tcp 8081 2>/dev/null || \
+        semanage port -a -t http_port_t -p tcp 8081 2>/dev/null || true
+
+        # Label lab directory context
+        semanage fcontext -a -t httpd_sys_rw_content_t "/srv/labs/lab01(/.*)?" 2>/dev/null || true
+    fi
+
+    if command -v restorecon >/dev/null 2>&1; then
+        restorecon -R /srv/labs/lab01 2>/dev/null || true
+    fi
+fi
+
+echo "[+] Step 8: Setting Hostname & Appliance Boot Banner..."
 HOSTNAME_TARGET="lab01-${STUDENT_ID//_/-}"
 if command -v hostnamectl >/dev/null 2>&1; then
     hostnamectl set-hostname "${HOSTNAME_TARGET}" 2>/dev/null || true
@@ -150,7 +176,7 @@ cat << EOF > /etc/motd
 EOF
 cp /etc/motd /etc/issue
 
-echo "[+] Step 8: Installing PHP-FPM pool configuration..."
+echo "[+] Step 9: Installing PHP-FPM pool configuration..."
 FPM_CONF_COPIED=0
 for FPM_DIR in "/etc/php-fpm.d" "/etc/php/8.3/fpm/pool.d" "/etc/php/8.2/fpm/pool.d" "/etc/php/8.1/fpm/pool.d" "/etc/php/8.0/fpm/pool.d"; do
     if [ -d "$FPM_DIR" ]; then
@@ -166,7 +192,7 @@ if [ "$FPM_CONF_COPIED" -eq 0 ]; then
     cp "${SCRIPT_DIR}/config/lab01-php-fpm.conf" /etc/php-fpm.d/lab01.conf
 fi
 
-echo "[+] Step 9: Installing Apache VirtualHost configuration..."
+echo "[+] Step 10: Installing Apache VirtualHost configuration..."
 if [ -d "/etc/httpd/conf.d" ]; then
     cp "${SCRIPT_DIR}/config/lab01-apache.conf" /etc/httpd/conf.d/lab01.conf
 elif [ -d "/etc/apache2/sites-available" ]; then
@@ -174,18 +200,18 @@ elif [ -d "/etc/apache2/sites-available" ]; then
     a2ensite lab01.conf || true
 fi
 
-echo "[+] Step 10: Configuring /etc/hosts mapping..."
+echo "[+] Step 11: Configuring /etc/hosts mapping..."
 if ! grep -q "employeeportal.local" /etc/hosts; then
     echo "127.0.0.1 employeeportal.local" >> /etc/hosts
 fi
 
-echo "[+] Step 11: Reloading web services..."
-systemctl reload php-fpm || systemctl restart php-fpm || systemctl reload php8.3-fpm || systemctl reload php8.2-fpm || true
-systemctl reload httpd || systemctl restart httpd || systemctl reload apache2 || systemctl restart apache2 || true
+echo "[+] Step 12: Reloading & restarting web services..."
+systemctl restart php-fpm || systemctl restart php8.3-fpm || systemctl restart php8.2-fpm || true
+systemctl restart httpd || systemctl restart apache2 || true
 
 # Production Purge Mode: Clean source repository, setup scripts, and instructor tools from VM image
 if [ "$IS_PRODUCTION" -eq 1 ]; then
-    echo "[+] Step 12: Executing Production Security Purge (Removing build scripts & salt tools)..."
+    echo "[+] Step 13: Executing Production Security Purge (Removing build scripts & salt tools)..."
     rm -f "${SCRIPT_DIR}/setup.sh"
     rm -f "${SCRIPT_DIR}/generate_student_flags.py"
     rm -rf "${SCRIPT_DIR}/.git"

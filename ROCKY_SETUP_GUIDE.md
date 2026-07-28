@@ -1,103 +1,78 @@
-# Step-by-Step Guide: Deploying Lab 01 on a Rocky Linux VM (Rocky 8 / 9)
+# Step-by-Step Guide: Deploying EHPT_01 on Rocky Linux / RHEL VM
 
-Follow these steps to set up and provision the **Lab 01 NexaCorp Employee Portal** environment on a Rocky Linux Virtual Machine.
+Follow these steps to provision and deploy the **Lab 01 NexaCorp Employee Portal** environment on Rocky Linux (Rocky 8 / 9).
 
 ---
 
 ## 📋 Prerequisites & Package Installation
 
-Open a terminal on your Rocky Linux VM and install Apache, PHP-FPM, Git, and essential dependencies:
+Open a terminal on your Rocky Linux VM and install Apache (`httpd`), PHP-FPM, Git, and SELinux management tools:
 
 ```bash
 # 1. Update system packages
 sudo dnf update -y
 
-# 2. Install Apache (httpd), PHP, PHP-FPM, and Git
+# 2. Install Apache (httpd), PHP, PHP-FPM, Git, and SELinux policy management utilities
 sudo dnf install -y httpd php php-fpm git policycoreutils-python-utils
 
 # 3. Enable and start Apache and PHP-FPM services
-sudo systemctl enable --now httpd
-sudo systemctl enable --now php-fpm
+sudo systemctl enable --now httpd php-fpm
 ```
 
 ---
 
-## 🔒 Firewall & SELinux Setup
+## 🔒 Automated SELinux & Firewall Configuration
 
-### 1. Open Lab Port 8081 in Firewall
+`setup.sh` handles SELinux port labeling (`8081`), directory file contexts (`httpd_sys_rw_content_t`), and permissions out-of-the-box.
+
+If setting up firewall manually:
 ```bash
 sudo firewall-cmd --permanent --add-port=8081/tcp
 sudo firewall-cmd --reload
 ```
 
-### 2. Configure SELinux Policy
-Allow Apache to perform proxy connections to the PHP-FPM UNIX socket:
-
-```bash
-# Allow HTTPD network and socket connections
-sudo setsebool -P httpd_can_network_connect 1
-sudo setsebool -P httpd_execmem 1
-
-# Label lab directory contexts
-sudo mkdir -p /srv/labs/lab01
-sudo semanage fcontext -a -t httpd_sys_rw_content_t "/srv/labs/lab01(/.*)?"
-sudo restorecon -R -v /srv/labs/lab01
-```
-
-*(Note: If testing in a lab environment where SELinux isn't required to be enforcing, `sudo setenforce 0` can be used temporarily).*
-
 ---
 
 ## 🚀 Provisioning Lab 01 with `setup.sh`
 
-### 1. Clone or Copy the Repository
+### 1. Clone the Repository to a Workspace Folder (e.g. `~/EHPT_01`)
+> **Important:** Do NOT clone directly into `/srv/labs/lab01`. Clone to `~/EHPT_01` and let `setup.sh` populate `/srv/labs/lab01`.
+
 ```bash
+cd ~
 git clone https://github.com/Abdelrhman-Mohamedd/EHPT_01.git
 cd EHPT_01
 ```
 
-### 2. Run the Provisioning Script with Student ID
-Execute `setup.sh` as root, specifying the student's unique ID:
+### 2. Run Provisioning Script with Student ID
+Execute `setup.sh` as root with the target Student ID:
 
 ```bash
-# Syntax: sudo ./setup.sh <STUDENT_ID> [SECRET_SALT]
+# Syntax: sudo ./setup.sh <STUDENT_ID> [SECRET_SALT] [--production]
 sudo ./setup.sh abdelrhman_h_2026
 ```
 
-### What `setup.sh` Automatically Does:
-1. Creates the `lab01` system user and `/srv/labs/lab01/{public,data,public/uploads,sessions}` directories.
-2. Derives unique SHA-256 flags for LFI, RFI, Path Traversal, File Upload, and Command Injection.
-3. Installs `/etc/php-fpm.d/lab01.conf` pool listener (`/run/php-fpm/lab01.sock`) with `allow_url_include=On`.
-4. Installs `/etc/httpd/conf.d/lab01.conf` VirtualHost on port `8081`.
-5. Binds VM identity: updates system hostname to `lab01-abdelrhman-h-2026`, MOTD/banner, and web portal header badge.
-6. Adds `127.0.0.1 employeeportal.local` to `/etc/hosts` and reloads Apache & PHP-FPM.
+### What `setup.sh` Automatically Fixes & Provisions:
+1. **PHP-FPM Process Manager Fix**: Configures `pm = dynamic` in `/etc/php-fpm.d/lab01.conf` so PHP-FPM starts without exit code 78 errors.
+2. **Apache Port 8081 Binding**: Adds `Listen 8081` to `/etc/httpd/conf.d/lab01.conf`.
+3. **SELinux Port Labeling**: Automatically runs `semanage port -m -t http_port_t -p tcp 8081` to allow Apache to bind to port 8081.
+4. **Directory Traversal Permissions**: Sets `/srv/labs/lab01` ownership to `root:lab01` and permissions to `750` so Apache (in `lab01` group) can access `/srv/labs/lab01/public` without 403 Forbidden errors.
+5. **Dynamic Cryptographic Flag Binding**: Injects student-unique SHA-256 flags into target files.
 
 ---
 
 ## 🧪 Verifying the Deployment
 
 ### 1. Test Web Access
-Open a browser inside the VM (or from host if network mode is Bridged/Host-Only):
 - **URL:** `http://employeeportal.local:8081` or `http://127.0.0.1:8081`
 
-### 2. (Optional) Run RFI Attacker Server Offline
-In a separate terminal on the VM, start the offline HTTP helper server:
+### 2. Check Services Status
 ```bash
-./attacker_helper.py
+sudo systemctl status httpd
+sudo systemctl status php-fpm
 ```
-Test RFI in the portal at:
-`http://employeeportal.local:8081/config_loader.php?template=http://127.0.0.1:8000/rfi_shell`
 
----
-
-## 📊 Instructor Flag Verification
-
-To check or verify flags submitted by a student:
-
+### 3. Verify Flags (Instructor Tool)
 ```bash
-# View expected flags for student
 ./generate_student_flags.py abdelrhman_h_2026
-
-# Verify submitted flag string
-./generate_student_flags.py abdelrhman_h_2026 --verify FLAG{5b03425554da4aede733fb9f1fcf83b7}
 ```
