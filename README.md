@@ -1,61 +1,24 @@
 # Lab 01: NexaCorp Enterprise Employee Portal (Ethical Hacking Lab)
 
-This repository contains the complete implementation of **Lab 01** for Ethical Hacking training.
+This repository contains the complete source code, isolation configs, setup scripts, and instructor verification tools for **Lab 01**.
 
-## Repository Structure
+## Appliance Hardening & Anti-Tampering Model
 
-```
-Lab 1/
-├── attacker_helper.py
-├── config/
-│   ├── lab01-apache.conf
-│   └── lab01-php-fpm.conf
-├── data/                       ← Protected outside DocumentRoot
-│   ├── documents/
-│   │   ├── policy.pdf
-│   │   ├── security_guidelines.txt
-│   │   └── welcome.txt
-│   └── reports/
-│       ├── q3_eval_2025.pdf
-│       └── report.pdf
-├── public/                     ← Apache DocumentRoot
-│   ├── assets/css/style.css
-│   ├── uploads/                ← Writable upload dir (kept inside public/ for web shell execution)
-│   ├── config_loader.php
-│   ├── default.php
-│   ├── document_center.php
-│   ├── download_report.php
-│   ├── footer.php
-│   ├── header.php
-│   ├── hr_portal.php
-│   ├── index.php
-│   ├── it_tools.php
-│   ├── network_diagnostics.php
-│   ├── profile.php
-│   └── upload_resume.php
-├── README.md
-├── RUBRIC.md
-└── setup.sh
-```
+To ensure students **never have direct file system access to lab files, source code, or flags**, Lab 01 is deployed as a **Hardened Black-Box Virtual Appliance**:
 
-## Features & Vulnerabilities Included
+1. **Network-Only Black-Box Access**: Students interact with the web app exclusively over HTTP (`http://<VM_IP>:8081`). No console/SSH access is provided.
+2. **Anti-Tamper Permissions (`root:lab01`)**: All files under `/srv/labs/lab01` are owned by `root:lab01` with strict `750`/`640` permissions. The web application process `lab01` has read-only access to source code and cannot rewrite files.
+3. **Cryptographic Flag Binding**: Flags are derived dynamically from `sha256(STUDENT_ID + VULN_TYPE + SECRET_SALT)`.
+4. **Production Security Purge**: Running `./setup.sh <STUDENT_ID> --production` purges build scripts, secret keys, and git history from the guest VM disk before export.
 
-1. **Document Center (`document_center.php`)** - Local File Inclusion (LFI) via `?doc=` (includes from `../data/documents/`)
-2. **IT Tools (`config_loader.php`)** - Remote File Inclusion (RFI) via `?template=`
-3. **Profile Management (`download_report.php`)** - Path Traversal (Arbitrary File Read from `../data/reports/` via `readfile()`)
-4. **HR Portal (`upload_resume.php`)** - Unrestricted File Upload (uploads to `/uploads/` inside DocumentRoot)
-5. **IT Diagnostics (`network_diagnostics.php`)** - Command Injection via `shell_exec()`
-
-## Quick Start
+## Quick Start (Instructor Setup)
 
 ```bash
-# Provision user, directories, PHP-FPM pool, and Apache VirtualHost
-sudo ./setup.sh
+# Provision student VM in production mode
+sudo ./setup.sh abdelrhman_h_2026 EHPT01_SECRET_SALT_2026 --production
 
-# (Optional) Start offline RFI helper HTTP server
-./attacker_helper.py
+# Verify student flags (on instructor system)
+./generate_student_flags.py abdelrhman_h_2026
 ```
 
-Portal URL: `http://employeeportal.local:8081`
-
-See [RUBRIC.md](RUBRIC.md) for report grading criteria.
+See [APPLIANCE_HARDENING_GUIDE.md](APPLIANCE_HARDENING_GUIDE.md) and [RUBRIC.md](RUBRIC.md) for complete details.
