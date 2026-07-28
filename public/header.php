@@ -1,5 +1,7 @@
 <?php
 // Header component for NexaCorp Employee Portal
+require_once(__DIR__ . '/student_config.php');
+
 if (!isset($currentPage)) {
     $currentPage = 'dashboard';
 }
@@ -9,7 +11,7 @@ if (!isset($currentPage)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexaCorp Enterprise Portal</title>
+    <title>NexaCorp Enterprise Portal (Lab01 - <?= htmlspecialchars($GLOBALS['STUDENT_ID']) ?>)</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,10 +31,10 @@ if (!isset($currentPage)) {
             <li class="nav-item"><a href="profile.php" class="<?= $currentPage === 'profile' ? 'active' : '' ?>">My Profile</a></li>
         </ul>
         <div class="user-badge">
-            <div class="avatar">JS</div>
+            <div class="avatar">ID</div>
             <div class="user-info">
-                <div class="user-name">John Smith</div>
-                <div class="user-role">Systems Analyst</div>
+                <div class="user-name"><?= htmlspecialchars($GLOBALS['STUDENT_ID']) ?></div>
+                <div class="user-role">Lab01 Instance Boundary</div>
             </div>
         </div>
     </nav>
