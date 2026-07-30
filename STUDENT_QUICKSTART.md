@@ -8,7 +8,7 @@ Welcome to **Lab 01: NexaCorp Employee Portal** — your personalized ethical ha
 
 ### 1. Login
 Log in with the credentials provided by your instructor:
-- **Username:** `cyberlabs`
+- **Username:** `student`
 - **Password:** *(provided by instructor)*
 
 ### 2. Enter Your Student ID

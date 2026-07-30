@@ -15,14 +15,14 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-STUDENT_USER="cyberlabs"
+STUDENT_USER="student"
 EHPT_DIR="/home/${STUDENT_USER}/EHPT_01"
 
 echo "=============================================================================="
 echo "[*] Preparing Lab 01 Black-Box Template VM"
 echo "=============================================================================="
 
-# ---- 1. Ensure student user 'cyberlabs' exists ----
+# ---- 1. Ensure student user 'student' exists ----
 echo "[+] Step 1: Creating student user '${STUDENT_USER}' (no sudo, locked password)..."
 if ! id -u "$STUDENT_USER" >/dev/null 2>&1; then
     useradd -m -s /bin/bash "$STUDENT_USER"
@@ -65,16 +65,16 @@ chmod 755 "/home/${STUDENT_USER}/first_boot_setup.sh"
 # Trigger it on first login via .bash_profile
 PROFILE="/home/${STUDENT_USER}/.bash_profile"
 if ! grep -q "first_boot_setup.sh" "$PROFILE" 2>/dev/null; then
-    echo 'bash /home/cyberlabs/first_boot_setup.sh' >> "$PROFILE"
+    echo 'bash /home/student/first_boot_setup.sh' >> "$PROFILE"
     chown "${STUDENT_USER}:${STUDENT_USER}" "$PROFILE"
 fi
 
 # ---- 5. Configure Narrowly Scoped sudoers Rule ----
 echo "[+] Step 5: Configuring restricted sudoers rule..."
 cat << EOF > /etc/sudoers.d/lab01-setup
-# Lab 01 Restricted sudo: cyberlabs may only run setup.sh as root
+# Lab 01 Restricted sudo: student may only run setup.sh as root
 # This specific path is root-owned, so the student cannot tamper with its contents.
-cyberlabs ALL=(root) NOPASSWD: /home/cyberlabs/EHPT_01/setup.sh *
+student ALL=(root) NOPASSWD: /home/student/EHPT_01/setup.sh *
 EOF
 chmod 440 /etc/sudoers.d/lab01-setup
 echo "    Sudoers rule installed at /etc/sudoers.d/lab01-setup"
@@ -96,7 +96,7 @@ cat << 'BANNER' > /etc/issue.net
 ║          NexaCorp Ethical Hacking Lab 01 — Black-Box Appliance    ║
 ║     Unauthorized access is strictly prohibited.                    ║
 ╚═══════════════════════════════════════════════════════════════════╝
-Login as: cyberlabs / labpassword (change before distributing)
+Login as: student / labpassword (change before distributing)
 BANNER
 
 # ---- 8. Lock root password to prevent su escalation ----

@@ -5,10 +5,10 @@
 # then removes itself from .bash_profile so it only runs once.
 # ==============================================================================
 
-SETUP_SCRIPT="/home/cyberlabs/EHPT_01/setup.sh"
+SETUP_SCRIPT="/home/student/EHPT_01/setup.sh"
 SALT="EHPT01_SECRET_SALT_2026"
-FIRST_BOOT_FLAG="/home/cyberlabs/.lab01_provisioned"
-PROFILE_FILE="/home/cyberlabs/.bash_profile"
+FIRST_BOOT_FLAG="/home/student/.lab01_provisioned"
+PROFILE_FILE="/home/student/.bash_profile"
 
 # ---- Guard: only run once ----
 if [ -f "$FIRST_BOOT_FLAG" ]; then
