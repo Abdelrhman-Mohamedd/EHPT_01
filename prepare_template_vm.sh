@@ -37,8 +37,12 @@ gpasswd -d "$STUDENT_USER" sudo  2>/dev/null || true
 echo "${STUDENT_USER}:labpassword" | chpasswd
 echo "    Password set to: labpassword  (change this before distributing!)"
 
-# ---- 2. Clone / update the EHPT_01 repo into student home ----
-echo "[+] Step 2: Deploying EHPT_01 repository to ${EHPT_DIR}..."
+# ---- 2. Install zenity for GUI dialogs ----
+echo "[+] Step 2a: Installing zenity (GUI dialog dependency)..."
+dnf install -y zenity >/dev/null 2>&1 && echo "    zenity installed." || echo "    [!] zenity install failed — check DNF."
+
+# ---- 2b. Clone / update the EHPT_01 repo into student home ----
+echo "[+] Step 2b: Deploying EHPT_01 repository to ${EHPT_DIR}..."
 if [ ! -d "$EHPT_DIR/.git" ]; then
     git clone https://github.com/Abdelrhman-Mohamedd/EHPT_01.git "$EHPT_DIR"
 else
@@ -62,12 +66,21 @@ cp "${EHPT_DIR}/first_boot_setup.sh" "/home/${STUDENT_USER}/first_boot_setup.sh"
 chown root:root "/home/${STUDENT_USER}/first_boot_setup.sh"
 chmod 755 "/home/${STUDENT_USER}/first_boot_setup.sh"
 
-# Trigger it on first login via .bash_profile
-PROFILE="/home/${STUDENT_USER}/.bash_profile"
-if ! grep -q "first_boot_setup.sh" "$PROFILE" 2>/dev/null; then
-    echo 'bash /home/student/first_boot_setup.sh' >> "$PROFILE"
-    chown "${STUDENT_USER}:${STUDENT_USER}" "$PROFILE"
-fi
+# Trigger via GNOME autostart .desktop entry (NOT .bash_profile)
+# This avoids blocking the graphical session before the desktop is ready.
+AUTOSTART_DIR="/home/${STUDENT_USER}/.config/autostart"
+mkdir -p "$AUTOSTART_DIR"
+cat > "${AUTOSTART_DIR}/lab01-setup.desktop" << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Lab 01 First Boot Setup
+Exec=bash /home/student/first_boot_setup.sh
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=3
+DESKTOP
+chown -R "${STUDENT_USER}:${STUDENT_USER}" "/home/${STUDENT_USER}/.config"
+echo "    GNOME autostart entry created at ${AUTOSTART_DIR}/lab01-setup.desktop"
+echo "    (NOT wired to .bash_profile — runs after GNOME desktop loads)"
 
 # ---- 5. Configure Narrowly Scoped sudoers Rule ----
 echo "[+] Step 5: Configuring restricted sudoers rule..."

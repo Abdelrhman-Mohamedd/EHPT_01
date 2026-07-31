@@ -1,95 +1,126 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# first_boot_setup.sh — Student First-Boot Personalization Wizard
-# Runs automatically on first login, prompts for Student ID, provisions lab,
-# then removes itself from .bash_profile so it only runs once.
+# first_boot_setup.sh — Student First-Boot Personalization Wizard (GUI Mode)
+# Triggered via GNOME autostart .desktop file (NOT .bash_profile).
+# Uses zenity GUI dialogs — no raw terminal input required.
+# Removes its own autostart entry on success so it never runs again.
 # ==============================================================================
 
 SETUP_SCRIPT="/home/student/EHPT_01/setup.sh"
 SALT="EHPT01_SECRET_SALT_2026"
 FIRST_BOOT_FLAG="/home/student/.lab01_provisioned"
-PROFILE_FILE="/home/student/.bash_profile"
+AUTOSTART_DESKTOP="/home/student/.config/autostart/lab01-setup.desktop"
 
 # ---- Guard: only run once ----
 if [ -f "$FIRST_BOOT_FLAG" ]; then
     exit 0
 fi
 
-clear
-cat << 'BANNER'
-╔══════════════════════════════════════════════════════════════════╗
-║          NexaCorp Ethical Hacking Lab — First Boot Setup         ║
-║                     Black-Box Appliance v1.0                     ║
-╚══════════════════════════════════════════════════════════════════╝
-
-Welcome to your personalized Lab 01 environment.
-
-Before you can begin, this VM must be initialized using your unique
-Student ID. This process takes approximately 30 seconds.
-
-BANNER
-
-# ---- Input Validation Loop ----
-while true; do
-    read -rp "  Enter your Student ID (e.g. 231027680): " SID
-    SID="${SID// /_}"   # Replace spaces with underscores
-
-    if [[ -z "$SID" ]]; then
-        echo "  [!] Student ID cannot be empty. Please try again."
-    elif [[ ! "$SID" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-        echo "  [!] Invalid characters. Only letters, digits, hyphens, and underscores are allowed."
-    else
-        break
-    fi
-done
-
-echo ""
-echo "  [*] Confirm: Your Student ID is: ${SID}"
-read -rp "  Proceed? (yes/no): " CONFIRM
-
-if [[ "$CONFIRM" != "yes" ]]; then
-    echo "  [!] Aborted. Please re-login and try again."
+# ---- Dependency check ----
+if ! command -v zenity >/dev/null 2>&1; then
+    notify-send "Lab 01 Setup" "Error: zenity is not installed. Please contact your instructor." 2>/dev/null || true
     exit 1
 fi
 
-echo ""
-echo "  [+] Starting lab personalization... Please wait..."
-echo ""
+# ---- Welcome Dialog ----
+zenity --info \
+    --title="NexaCorp Ethical Hacking Lab 01" \
+    --width=460 \
+    --text="<b>Welcome to Lab 01: NexaCorp Employee Portal</b>\n\nThis VM must be personalized using your unique <b>Student ID</b> before you can begin.\n\nClick <b>OK</b> to continue." \
+    2>/dev/null || exit 1
 
-# ---- Run setup.sh via restricted sudo (single allowed command) ----
-sudo "$SETUP_SCRIPT" "$SID" "$SALT" --production
+# ---- Student ID Input Loop ----
+while true; do
+    SID=$(zenity --entry \
+        --title="Lab 01 — Student ID Required" \
+        --width=420 \
+        --text="Enter your <b>Student ID</b> exactly as assigned by your instructor.\n\n<small>Example: 231027680</small>" \
+        --entry-text="" \
+        2>/dev/null)
 
-EXIT_CODE=$?
+    # Cancelled
+    if [ $? -ne 0 ]; then
+        zenity --warning --title="Lab 01 Setup" --width=380 \
+            --text="Setup cancelled. Please log out and log back in to try again." \
+            2>/dev/null || true
+        exit 1
+    fi
 
-if [ "$EXIT_CODE" -eq 0 ]; then
-    # Mark as provisioned so this wizard never runs again
+    SID="${SID// /_}"  # Replace spaces with underscores
+
+    if [[ -z "$SID" ]]; then
+        zenity --error --title="Invalid Input" --width=380 \
+            --text="Student ID cannot be empty. Please try again." 2>/dev/null || true
+        continue
+    fi
+
+    if [[ ! "$SID" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        zenity --error --title="Invalid Input" --width=380 \
+            --text="Invalid characters in Student ID.\n\nOnly letters, digits, hyphens ( - ) and underscores ( _ ) are allowed." 2>/dev/null || true
+        continue
+    fi
+
+    break
+done
+
+# ---- Confirmation Dialog ----
+zenity --question \
+    --title="Confirm Student ID" \
+    --width=420 \
+    --text="Your Student ID is:\n\n<b>${SID}</b>\n\nAre you sure this is correct?\n<small>This cannot be changed after confirming.</small>" \
+    2>/dev/null || exit 1
+
+# ---- Progress: Run setup.sh in background, show progress bar ----
+(
+    echo "# Provisioning lab environment for ${SID}..."
+    echo "10"
+
+    sudo "$SETUP_SCRIPT" "$SID" "$SALT" --production > /tmp/lab01_setup.log 2>&1
+    SETUP_EXIT=$?
+
+    echo "90"
+    sleep 1
+    echo "100"
+
+    # Store exit code for main script to read
+    echo "$SETUP_EXIT" > /tmp/lab01_setup_exit
+) | zenity --progress \
+    --title="Lab 01 Setup — Please Wait" \
+    --width=460 \
+    --text="Personalizing your lab environment...\n\nThis will take approximately 30 seconds." \
+    --percentage=0 \
+    --auto-close \
+    --no-cancel \
+    2>/dev/null
+
+# ---- Read exit code ----
+SETUP_EXIT=1
+if [ -f /tmp/lab01_setup_exit ]; then
+    SETUP_EXIT=$(cat /tmp/lab01_setup_exit)
+    rm -f /tmp/lab01_setup_exit
+fi
+
+if [ "$SETUP_EXIT" -eq 0 ]; then
+    # Detect VM IP for portal URL
+    VM_IP=$(hostname -I | awk '{print $1}')
+
+    # Mark as provisioned — wizard will never run again
     touch "$FIRST_BOOT_FLAG"
 
-    # Remove trigger from .bash_profile
-    sed -i '/first_boot_setup\.sh/d' "$PROFILE_FILE" 2>/dev/null || true
+    # Remove the GNOME autostart entry so this window never opens again
+    rm -f "$AUTOSTART_DESKTOP" 2>/dev/null || true
 
-    clear
-    cat << DONE
-╔══════════════════════════════════════════════════════════════════╗
-║              Lab 01 Personalization Complete! 🎉                  ║
-╚══════════════════════════════════════════════════════════════════╝
-
-  Student ID   : ${SID}
-  Portal URL   : http://$(hostname -I | awk '{print $1}'):8081
-  Alternative  : http://employeeportal.local:8081
-
-  Open a browser and navigate to the portal URL above to begin.
-
-  Your task is to find and exploit all vulnerabilities in the
-  NexaCorp Employee Portal and document your findings.
-
-  Good luck!
-
-══════════════════════════════════════════════════════════════════
-DONE
+    # ---- Success Dialog ----
+    zenity --info \
+        --title="Lab 01 Ready! 🎉" \
+        --width=480 \
+        --text="<b>Your lab environment is ready!</b>\n\n<b>Student ID:</b> ${SID}\n<b>Portal URL:</b> http://${VM_IP}:8081\n\n<small>Alternative: http://employeeportal.local:8081</small>\n\nOpen a browser and navigate to the URL above to begin.\n\nGood luck!" \
+        2>/dev/null || true
 else
-    echo ""
-    echo "  [!] Error: Lab provisioning failed (exit code: ${EXIT_CODE})."
-    echo "      Please contact your instructor for assistance."
-    exit 1
+    SETUP_LOG=$(cat /tmp/lab01_setup.log 2>/dev/null | tail -20 || echo "No log output.")
+    zenity --error \
+        --title="Lab 01 Setup Failed" \
+        --width=480 \
+        --text="Lab provisioning failed.\n\nPlease contact your instructor and provide the following log:\n\n<tt>${SETUP_LOG}</tt>" \
+        2>/dev/null || true
 fi
