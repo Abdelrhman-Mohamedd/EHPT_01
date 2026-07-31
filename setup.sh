@@ -82,9 +82,10 @@ EOF
 echo "FLAG{${FLAG_UPLOAD}}" > /srv/labs/lab01/public/uploads/.upload_marker
 echo "FLAG{${FLAG_RFI}}" > /srv/labs/lab01/public/uploads/.rfi_marker
 
-# Command Injection Flag (System Root Path)
+# Command Injection Flag — readable by lab01 process only (NOT by student shell user)
 echo "FLAG{${FLAG_CMDI}}" > /etc/lab_cmdi_flag
-chmod 644 /etc/lab_cmdi_flag
+chown root:lab01 /etc/lab_cmdi_flag
+chmod 640 /etc/lab_cmdi_flag   # root:rw, lab01 group:r, others:--- (student shell = DENIED)
 
 echo "[+] Step 5: Binding VM Identity & Generating Metadata..."
 BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -134,7 +135,8 @@ find /srv/labs/lab01/data -type f -exec chmod 640 {} \;
 # Only public/uploads is writable by lab01 process
 chown -R lab01:lab01 /srv/labs/lab01/public/uploads
 chmod 770 /srv/labs/lab01/public/uploads
-chmod 644 /srv/labs/lab01/public/uploads/.upload_marker /srv/labs/lab01/public/uploads/.rfi_marker
+# Marker flags: readable by lab01 PHP process only — student shell user (others=---) is DENIED
+chmod 640 /srv/labs/lab01/public/uploads/.upload_marker /srv/labs/lab01/public/uploads/.rfi_marker
 
 echo "[+] Step 7: Configuring SELinux Policy & Port 8081 Binding..."
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" != "Disabled" ]; then
