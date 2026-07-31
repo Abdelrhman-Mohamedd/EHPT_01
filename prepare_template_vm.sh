@@ -49,16 +49,17 @@ else
     git -C "$EHPT_DIR" pull
 fi
 
-# ---- 3. Lock setup.sh — root owns it, student cannot edit it ----
-echo "[+] Step 3: Locking setup.sh so student cannot modify it..."
-chown root:root "${EHPT_DIR}/setup.sh"
-chmod 755 "${EHPT_DIR}/setup.sh"
+# ---- 3. Lock EHPT_01 repo — root:root owned, student read-only ----
+echo "[+] Step 3: Locking EHPT_01 repo — student has read-only access..."
 chown -R root:root "${EHPT_DIR}"
-chmod -R a-w "${EHPT_DIR}"
-# Allow student to read/traverse the repo directory (read-only)
-chmod a+rX "${EHPT_DIR}"
-chmod a+rX "${EHPT_DIR}/"*
-echo "    ${EHPT_DIR}/setup.sh is now root-owned and read-only for student."
+# Directories: rwxr-xr-x — student can enter and list but NOT write
+find "${EHPT_DIR}" -type d -exec chmod 755 {} \;
+# All files: rw-r--r-- — student can read but NOT write or tamper
+find "${EHPT_DIR}" -type f -exec chmod 644 {} \;
+# setup.sh specifically: r-xr-xr-x — student can execute via sudo, NOT write
+chmod 555 "${EHPT_DIR}/setup.sh"
+echo "    dirs=755  files=644  setup.sh=555  (all owned by root:root)"
+echo "    Student write access to EHPT_01: DENIED on every file."
 
 # ---- 4. Install the first-boot wizard ----
 echo "[+] Step 4: Installing first_boot_setup.sh wizard..."
