@@ -52,6 +52,27 @@ ACCT
 chmod 644 /var/lib/AccountsService/users/cyberlabs
 echo "    cyberlabs is now hidden from the GDM login screen (account still usable)."
 
+# ---- 1c. Copy UI settings (Wallpaper/Desktop shortcuts) from Instructor ----
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    echo "[+] Step 1c: Copying Desktop and UI settings from instructor (${SUDO_USER}) to student..."
+    # Copy desktop shortcuts
+    if [ -d "/home/${SUDO_USER}/Desktop" ]; then
+        cp -r "/home/${SUDO_USER}/Desktop" "/home/${STUDENT_USER}/"
+    fi
+    # Copy dconf settings (contains wallpaper configuration)
+    if [ -d "/home/${SUDO_USER}/.config/dconf" ]; then
+        mkdir -p "/home/${STUDENT_USER}/.config"
+        cp -r "/home/${SUDO_USER}/.config/dconf" "/home/${STUDENT_USER}/.config/"
+    fi
+    # Copy custom background images if any exist
+    if [ -d "/home/${SUDO_USER}/.local/share/backgrounds" ]; then
+        mkdir -p "/home/${STUDENT_USER}/.local/share"
+        cp -r "/home/${SUDO_USER}/.local/share/backgrounds" "/home/${STUDENT_USER}/.local/share/"
+    fi
+    chown -R "${STUDENT_USER}:${STUDENT_USER}" "/home/${STUDENT_USER}/Desktop" "/home/${STUDENT_USER}/.config" "/home/${STUDENT_USER}/.local" 2>/dev/null || true
+    echo "    Copied Desktop and dconf settings."
+fi
+
 # ---- 2. Install zenity for GUI dialogs ----
 echo "[+] Step 2: Installing zenity (GUI dialog dependency)..."
 dnf install -y zenity >/dev/null 2>&1 && echo "    zenity installed." || echo "    [!] zenity install failed — check DNF."
