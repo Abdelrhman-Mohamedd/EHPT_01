@@ -37,7 +37,7 @@ while true; do
     SID=$(zenity --entry \
         --title="Lab 01 — Student ID Required" \
         --width=420 \
-        --text="Enter your <b>Student ID</b> exactly as assigned by your instructor.\n\n<small>Example: 231027680</small>" \
+        --text="Enter your <b>Student ID</b> exactly as assigned by your instructor.\n\n<small>Example: 231000000</small>" \
         --entry-text="" \
         2>/dev/null)
 
