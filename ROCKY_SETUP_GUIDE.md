@@ -21,6 +21,50 @@ sudo systemctl enable --now httpd php-fpm
 
 ---
 
+## 🚀 Provisioning Lab 01 Template VM
+
+To securely deploy the lab, use the `prepare_template_vm.sh` script. This handles all file permissions, hides instructor accounts, installs the GUI wizard, and relocates sensitive files.
+
+### 1. Clone the Repository
+```bash
+cd /root
+git clone https://github.com/Abdelrhman-Mohamedd/EHPT_01.git
+cd EHPT_01
+```
+
+### 2. Run Template Preparation Script
+Execute `prepare_template_vm.sh` as root:
+
+```bash
+sudo ./prepare_template_vm.sh
+```
+
+### What `prepare_template_vm.sh` Automatically Fixes & Provisions:
+1. **User Isolation**: Creates a low-privileged `student` user, and hides the `cyberlabs` instructor account from GDM.
+2. **First-Boot UI**: Installs `first_boot_setup.sh` to trigger on GNOME autostart via `zenity`. Suppresses the GNOME "Welcome to Rocky Linux" initial setup wizard.
+3. **Repository Hardening**: Moves the entire `EHPT_01` repo to `/opt/lab01-setup/` (`root:root 700`) so students cannot read or tamper with setup scripts.
+4. **Restricted Sudo**: Grants `student` a single `sudoers` rule to run `/opt/lab01-setup/setup.sh`.
+5. **Secret Salt Security**: Stores the cryptographic salt in `/etc/lab01.conf` (`root:root 600`), completely hiding it from students.
+
+### 3. Finalize and Export
+Set a password for the student account (if needed) and export the VM.
+```bash
+sudo passwd student
+# Export the VM from your hypervisor (e.g., .OVA or .qcow2)
+```
+
+---
+
+## 🧪 Verifying the Deployment (Student Experience)
+
+When a student boots the exported VM:
+1. Log in as `student`.
+2. A Zenity GUI popup appears automatically, asking for the **Student ID**.
+3. After confirming, a progress bar shows the environment provisioning in the background using restricted sudo.
+4. Upon success, the script self-deletes and shows the portal URL (`http://<IP>:8081`).
+
+---
+
 ## 🔒 Automated SELinux & Firewall Configuration
 
 `setup.sh` handles SELinux port labeling (`8081`), directory file contexts (`httpd_sys_rw_content_t`), and permissions out-of-the-box.
@@ -29,50 +73,4 @@ If setting up firewall manually:
 ```bash
 sudo firewall-cmd --permanent --add-port=8081/tcp
 sudo firewall-cmd --reload
-```
-
----
-
-## 🚀 Provisioning Lab 01 with `setup.sh`
-
-### 1. Clone the Repository to a Workspace Folder (e.g. `~/EHPT_01`)
-> **Important:** Do NOT clone directly into `/srv/labs/lab01`. Clone to `~/EHPT_01` and let `setup.sh` populate `/srv/labs/lab01`.
-
-```bash
-cd ~
-git clone https://github.com/Abdelrhman-Mohamedd/EHPT_01.git
-cd EHPT_01
-```
-
-### 2. Run Provisioning Script with Student ID
-Execute `setup.sh` as root with the target Student ID:
-
-```bash
-# Syntax: sudo ./setup.sh <STUDENT_ID> [SECRET_SALT] [--production]
-sudo ./setup.sh abdelrhman_h_2026
-```
-
-### What `setup.sh` Automatically Fixes & Provisions:
-1. **PHP-FPM Process Manager Fix**: Configures `pm = dynamic` in `/etc/php-fpm.d/lab01.conf` so PHP-FPM starts without exit code 78 errors.
-2. **Apache Port 8081 Binding**: Adds `Listen 8081` to `/etc/httpd/conf.d/lab01.conf`.
-3. **SELinux Port Labeling**: Automatically runs `semanage port -m -t http_port_t -p tcp 8081` to allow Apache to bind to port 8081.
-4. **Directory Traversal Permissions**: Sets `/srv/labs/lab01` ownership to `root:lab01` and permissions to `750` so Apache (in `lab01` group) can access `/srv/labs/lab01/public` without 403 Forbidden errors.
-5. **Dynamic Cryptographic Flag Binding**: Injects student-unique SHA-256 flags into target files.
-
----
-
-## 🧪 Verifying the Deployment
-
-### 1. Test Web Access
-- **URL:** `http://employeeportal.local:8081` or `http://127.0.0.1:8081`
-
-### 2. Check Services Status
-```bash
-sudo systemctl status httpd
-sudo systemctl status php-fpm
-```
-
-### 3. Verify Flags (Instructor Tool)
-```bash
-./generate_student_flags.py abdelrhman_h_2026
 ```

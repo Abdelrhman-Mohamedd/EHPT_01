@@ -6,22 +6,25 @@ To ensure students **cannot access, cheat, read source flags directly, or tamper
 
 ## 🔒 4-Layer Anti-Tampering & Anti-Cheating Protection
 
-### Layer 1: Network-Only Appliance Model (No Local Console Access)
-- The VM boots directly into a clean login screen displaying the IP address and web portal URL (`http://<VM_IP>:8081`).
-- Root and user console logins are locked or disabled for students.
-- Students interact with the lab **strictly over the network** from their host OS or Kali Linux attack VM.
+### Layer 1: Network-Only Appliance Model & UI Isolation
+- The VM boots into GDM. The instructor account (`cyberlabs`) is hidden from the login screen.
+- Students log in as `student` (a low-privileged user).
+- A Zenity UI (`first_boot_setup.sh`) prompts for their Student ID, runs the provisioning script in the background via restricted `sudo`, and then self-deletes.
+- Root and user console logins (via SSH) are disabled for students.
+- Students interact with the lab **strictly over the network** from their host OS or Kali Linux attack VM via HTTP (`http://<VM_IP>:8081`).
 
 ### Layer 2: Strict File Ownership & Group Isolation (`root:lab01`)
 - All lab source files under `/srv/labs/lab01` are owned by `root:lab01`.
-- Permission mask set to `750` for directories and `640` for PHP application files.
-- `Others` (any student shell user account on the VM) have **`0` access** (cannot read, list, enter, or modify `/srv/labs/lab01`).
+- Permission mask set to `750` for directories and `640` for PHP application files. Subdirectories inside `public/` are set to `750`.
+- Target files like `/etc/lab_cmdi_flag`, `.upload_marker`, and `.rfi_marker` are owned by `root:lab01` or `lab01:lab01` with `640` permissions, so they can only be read by the web server process, not by a student's bash shell.
 - Even if a student gains remote code execution as web user `lab01`, user `lab01` has **read-only access** to the PHP source files (`root:lab01 640`). They **cannot tamper with, rewrite, or deface** the web application source code.
 - Only `/srv/labs/lab01/public/uploads/` is writable (`770`) for testing the File Upload vulnerability.
 
-### Layer 3: Instructor Tool & Build Script Purging
-- Build scripts (`setup.sh`, `generate_student_flags.py`, `.git` directory) are **purged from the student VM image** during final image production.
-- The `SECRET_SALT` and flag derivation script exist **only on the instructor's host system**.
-- Flags in target locations (e.g. `/etc/lab_cmdi_flag`, `security_guidelines.txt`) are personalized SHA-256 hashes generated dynamically per student ID.
+### Layer 3: Instructor Tool & Build Script Purging/Hiding
+- The entire `EHPT_01` repository is moved to `/opt/lab01-setup/` and owned by `root:root` with `700` permissions. The `student` user gets a `Permission denied` error if they try to read or list it.
+- The `SECRET_SALT` is stored in `/etc/lab01.conf` (`root:root 600`), completely invisible to the student. The GUI wizard (`first_boot_setup.sh`) contains no salt or sensitive data.
+- The `sudoers` rule strictly limits the `student` user to executing `/opt/lab01-setup/setup.sh`.
+- Build scripts and git history are completely hidden or purged.
 
 ### Layer 4: Cryptographic Flag Binding
 - Flags are deterministically generated from `sha256(STUDENT_ID + VULN_TYPE + SECRET_SALT)`.
@@ -34,22 +37,23 @@ To ensure students **cannot access, cheat, read source flags directly, or tamper
 When preparing a VM for a student:
 
 ### 1. Provision & Personalize the VM
-On the template VM, execute `setup.sh` with the `--production` flag:
+On the template VM, execute `prepare_template_vm.sh`:
 
 ```bash
-# Syntax: sudo ./setup.sh <STUDENT_ID> [SECRET_SALT] --production
-sudo ./setup.sh abdelrhman_h_2026 EHPT01_SECRET_SALT_2026 --production
+# Syntax: sudo ./prepare_template_vm.sh [SECRET_SALT]
+sudo ./prepare_template_vm.sh
 ```
 
 This command automatically:
-1. Injects personalized SHA-256 flags into target locations.
-2. Applies `root:lab01` anti-tamper permissions (`chmod 750` / `640`).
-3. Purges `setup.sh`, `generate_student_flags.py`, and `.git` from the guest file system.
+1. Creates the `student` user and hides the instructor account from GDM.
+2. Relocates the repository to `/opt/lab01-setup/` and sets up `/etc/lab01.conf`.
+3. Sets up the GUI autostart wizard (`first_boot_setup.sh`) for the `student` user.
+4. Locks the root account.
 
 ### 2. Lock Down OS Console & Export VM
-1. Lock root password:
+1. Change the student password:
    ```bash
-   sudo passwd -l root
+   sudo passwd student
    ```
 2. Export the VM to `.OVA` or `.qcow2` format and distribute it to the student.
 
@@ -57,7 +61,7 @@ This command automatically:
 
 ## 📊 Grading Submitted Reports
 
-On the instructor's machine:
+On the instructor's machine (which retains the `SECRET_SALT`):
 
 ```bash
 # View expected flags for student
