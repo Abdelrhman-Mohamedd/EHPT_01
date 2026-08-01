@@ -6,8 +6,10 @@
 # Removes its own autostart entry on success so it never runs again.
 # ==============================================================================
 
-SETUP_SCRIPT="/home/student/EHPT_01/setup.sh"
-SALT="EHPT01_SECRET_SALT_2026"
+# setup.sh lives in /opt/lab01-setup/ (root:root 700 — student cannot read or list it)
+# The secret salt is stored in /etc/lab01.conf (root:root 600 — student cannot read it)
+# This script only receives the Student ID from the user and passes it to sudo setup.sh
+SETUP_SCRIPT="/opt/lab01-setup/setup.sh"
 FIRST_BOOT_FLAG="/home/student/.lab01_provisioned"
 AUTOSTART_DESKTOP="/home/student/.config/autostart/lab01-setup.desktop"
 
@@ -75,7 +77,7 @@ zenity --question \
     echo "# Provisioning lab environment for ${SID}..."
     echo "10"
 
-    sudo "$SETUP_SCRIPT" "$SID" "$SALT" --production > /tmp/lab01_setup.log 2>&1
+    sudo "$SETUP_SCRIPT" "$SID" --production > /tmp/lab01_setup.log 2>&1
     SETUP_EXIT=$?
 
     echo "90"

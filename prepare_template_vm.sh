@@ -5,24 +5,27 @@
 # distributing to students. Students will NOT need root or sudo for anything
 # except the single whitelisted setup.sh call via first_boot_setup.sh.
 #
-# Usage: sudo ./prepare_template_vm.sh
+# Usage: sudo ./prepare_template_vm.sh [SECRET_SALT]
 # ==============================================================================
 
 set -e
 
 if [ "$EUID" -ne 0 ]; then
-    echo "[-] Please run as root: sudo ./prepare_template_vm.sh"
+    echo "[-] Please run as root: sudo ./prepare_template_vm.sh [SECRET_SALT]"
     exit 1
 fi
 
 STUDENT_USER="student"
-EHPT_DIR="/home/${STUDENT_USER}/EHPT_01"
+SECRET_SALT="${1:-EHPT01_SECRET_SALT_2026}"
+
+# EHPT_01 repo goes to /opt/lab01-setup/ (root:root 700 — invisible to student)
+EHPT_DIR="/opt/lab01-setup"
 
 echo "=============================================================================="
 echo "[*] Preparing Lab 01 Black-Box Template VM"
 echo "=============================================================================="
 
-# ---- 1. Ensure student user 'student' exists ----
+# ---- 1. Create student user 'student' ----
 echo "[+] Step 1: Creating student user '${STUDENT_USER}' (no sudo, locked password)..."
 if ! id -u "$STUDENT_USER" >/dev/null 2>&1; then
     useradd -m -s /bin/bash "$STUDENT_USER"
@@ -33,42 +36,47 @@ fi
 gpasswd -d "$STUDENT_USER" wheel 2>/dev/null || true
 gpasswd -d "$STUDENT_USER" sudo  2>/dev/null || true
 
-# Set a simple known password for the student login (instructor changes this or uses autologin)
+# Set a simple known password (instructor changes before distributing)
 echo "${STUDENT_USER}:labpassword" | chpasswd
 echo "    Password set to: labpassword  (change this before distributing!)"
 
 # ---- 2. Install zenity for GUI dialogs ----
-echo "[+] Step 2a: Installing zenity (GUI dialog dependency)..."
+echo "[+] Step 2: Installing zenity (GUI dialog dependency)..."
 dnf install -y zenity >/dev/null 2>&1 && echo "    zenity installed." || echo "    [!] zenity install failed — check DNF."
 
-# ---- 2b. Clone / update the EHPT_01 repo into student home ----
-echo "[+] Step 2b: Deploying EHPT_01 repository to ${EHPT_DIR}..."
-if [ ! -d "$EHPT_DIR/.git" ]; then
+# ---- 3. Write the secret salt to /etc/lab01.conf (root:root 600 — student CANNOT read) ----
+echo "[+] Step 3: Storing secret salt in /etc/lab01.conf (root-only)..."
+echo "${SECRET_SALT}" > /etc/lab01.conf
+chown root:root /etc/lab01.conf
+chmod 600 /etc/lab01.conf
+echo "    Salt stored at /etc/lab01.conf  (mode: 600 — student access: DENIED)"
+
+# ---- 4. Clone EHPT_01 repo to /opt/lab01-setup/ (outside student home, root-only) ----
+echo "[+] Step 4: Deploying EHPT_01 repo to ${EHPT_DIR} (root-only, invisible to student)..."
+if [ ! -d "${EHPT_DIR}/.git" ]; then
     git clone https://github.com/Abdelrhman-Mohamedd/EHPT_01.git "$EHPT_DIR"
 else
     git -C "$EHPT_DIR" pull
 fi
 
-# ---- 3. Lock EHPT_01 repo — root:root owned, student read-only ----
-echo "[+] Step 3: Locking EHPT_01 repo — student has read-only access..."
-chown -R root:root "${EHPT_DIR}"
-# Directories: rwxr-xr-x — student can enter and list but NOT write
-find "${EHPT_DIR}" -type d -exec chmod 755 {} \;
-# All files: rw-r--r-- — student can read but NOT write or tamper
-find "${EHPT_DIR}" -type f -exec chmod 644 {} \;
-# setup.sh specifically: r-xr-xr-x — student can execute via sudo, NOT write
-chmod 555 "${EHPT_DIR}/setup.sh"
-echo "    dirs=755  files=644  setup.sh=555  (all owned by root:root)"
-echo "    Student write access to EHPT_01: DENIED on every file."
+# Root owns everything — student cannot list, read, or enter this directory
+chown -R root:root "$EHPT_DIR"
+chmod 700 "$EHPT_DIR"                       # directory: student access = DENIED
+find "$EHPT_DIR" -type d -exec chmod 700 {} \;  # all subdirs: blocked
+find "$EHPT_DIR" -type f -exec chmod 600 {} \;  # all files: blocked
+chmod 500 "${EHPT_DIR}/setup.sh"            # setup.sh: root can execute via sudo; student: DENIED
+echo "    ${EHPT_DIR}  mode=700 (root:root) — student cannot ls, read, or enter"
+echo "    setup.sh     mode=500 (root:root) — executable only by root via sudo"
 
-# ---- 4. Install the first-boot wizard ----
-echo "[+] Step 4: Installing first_boot_setup.sh wizard..."
+# ---- 5. Install the first-boot wizard (ONLY file student can see — contains NO salt) ----
+echo "[+] Step 5: Installing first_boot_setup.sh wizard (salt-free)..."
 cp "${EHPT_DIR}/first_boot_setup.sh" "/home/${STUDENT_USER}/first_boot_setup.sh"
 chown root:root "/home/${STUDENT_USER}/first_boot_setup.sh"
 chmod 755 "/home/${STUDENT_USER}/first_boot_setup.sh"
+echo "    Installed at /home/${STUDENT_USER}/first_boot_setup.sh"
+echo "    This file contains NO salt — student learns nothing from reading it."
 
 # Trigger via GNOME autostart .desktop entry (NOT .bash_profile)
-# This avoids blocking the graphical session before the desktop is ready.
 AUTOSTART_DIR="/home/${STUDENT_USER}/.config/autostart"
 mkdir -p "$AUTOSTART_DIR"
 cat > "${AUTOSTART_DIR}/lab01-setup.desktop" << 'DESKTOP'
@@ -80,31 +88,26 @@ X-GNOME-Autostart-enabled=true
 X-GNOME-Autostart-Delay=3
 DESKTOP
 chown -R "${STUDENT_USER}:${STUDENT_USER}" "/home/${STUDENT_USER}/.config"
-echo "    GNOME autostart entry created at ${AUTOSTART_DIR}/lab01-setup.desktop"
-echo "    (NOT wired to .bash_profile — runs after GNOME desktop loads)"
+echo "    GNOME autostart entry created — runs after desktop loads, not on login shell."
 
-# ---- 5. Configure Narrowly Scoped sudoers Rule ----
-echo "[+] Step 5: Configuring restricted sudoers rule..."
+# ---- 6. Configure Narrowly Scoped sudoers Rule (path updated to /opt/lab01-setup/) ----
+echo "[+] Step 6: Configuring restricted sudoers rule..."
 cat << EOF > /etc/sudoers.d/lab01-setup
-# Lab 01 Restricted sudo: student may only run setup.sh as root
-# This specific path is root-owned, so the student cannot tamper with its contents.
-student ALL=(root) NOPASSWD: /home/student/EHPT_01/setup.sh *
+# Lab 01 Restricted sudo: student may ONLY run setup.sh as root
+# setup.sh lives in /opt/lab01-setup/ (root:root 500) — student cannot read or modify it.
+student ALL=(root) NOPASSWD: /opt/lab01-setup/setup.sh *
 EOF
 chmod 440 /etc/sudoers.d/lab01-setup
-echo "    Sudoers rule installed at /etc/sudoers.d/lab01-setup"
+visudo -c -f /etc/sudoers.d/lab01-setup && echo "    Sudoers rule OK at /etc/sudoers.d/lab01-setup" || echo "[!] sudoers syntax error!"
 
-# Verify sudoers syntax is valid
-visudo -c -f /etc/sudoers.d/lab01-setup && echo "    Sudoers syntax OK." || echo "[!] WARNING: sudoers syntax error — fix before distributing!"
-
-# ---- 6. Harden SSH: disable root login and password auth (optional but recommended) ----
-echo "[+] Step 6: Hardening SSH configuration..."
-SSHD_CONF="/etc/ssh/sshd_config"
-sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' "$SSHD_CONF"
+# ---- 7. Harden SSH: disable root login ----
+echo "[+] Step 7: Hardening SSH configuration..."
+sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl reload sshd 2>/dev/null || true
 echo "    Root SSH login disabled."
 
-# ---- 7. Set appliance-mode login banner ----
-echo "[+] Step 7: Setting pre-login banner..."
+# ---- 8. Set appliance-mode login banner ----
+echo "[+] Step 8: Setting pre-login banner..."
 cat << 'BANNER' > /etc/issue.net
 ╔═══════════════════════════════════════════════════════════════════╗
 ║          NexaCorp Ethical Hacking Lab 01 — Black-Box Appliance    ║
@@ -113,18 +116,20 @@ cat << 'BANNER' > /etc/issue.net
 Login as: student / labpassword (change before distributing)
 BANNER
 
-# ---- 8. Lock root password to prevent su escalation ----
-echo "[+] Step 8: Locking root password..."
+# ---- 9. Lock root password ----
+echo "[+] Step 9: Locking root password..."
 passwd -l root
-echo "    Root account is now locked. Only sudo via sudoers rule is possible."
+echo "    Root account locked. Only sudo via sudoers rule is possible."
 
 # ---- Summary ----
 echo "=============================================================================="
 echo "[✅] Template VM Preparation Complete!"
 echo ""
 echo "     Student User    : ${STUDENT_USER} / labpassword"
-echo "     First-Boot Flow : Login -> type Student ID -> lab auto-provisions"
-echo "     Student Sudo    : ONLY allowed to run setup.sh (nothing else)"
+echo "     EHPT_01 Repo    : /opt/lab01-setup/  (root:root 700 — student cannot see)"
+echo "     Secret Salt     : /etc/lab01.conf    (root:root 600 — student cannot read)"
+echo "     Student Sudo    : ONLY /opt/lab01-setup/setup.sh (nothing else)"
+echo "     First-Boot UI   : /home/student/first_boot_setup.sh (contains NO salt)"
 echo "     Root Login      : LOCKED"
 echo ""
 echo "     Before distribution:"

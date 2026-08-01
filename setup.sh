@@ -7,12 +7,11 @@
 set -e
 
 if [ "$EUID" -ne 0 ]; then
-  echo "[-] Error: Please run setup.sh as root (e.g., sudo ./setup.sh <STUDENT_ID> [SECRET_SALT] [--production])"
+  echo "[-] Error: Please run setup.sh as root (e.g., sudo ./setup.sh <STUDENT_ID> [--production])"
   exit 1
 fi
 
 STUDENT_ID="${1:-abdelrhman_h_2026}"
-SECRET_SALT="${2:-EHPT01_SECRET_SALT_2026}"
 IS_PRODUCTION=0
 
 for arg in "$@"; do
@@ -20,6 +19,15 @@ for arg in "$@"; do
         IS_PRODUCTION=1
     fi
 done
+
+# ---- Read salt from protected config file (root:root 600 — never exposed to student) ----
+SALT_FILE="/etc/lab01.conf"
+if [ -f "$SALT_FILE" ]; then
+    SECRET_SALT=$(cat "$SALT_FILE")
+else
+    # Fallback: instructor running setup.sh directly before prepare_template_vm.sh has run
+    SECRET_SALT="${2:-EHPT01_SECRET_SALT_2026}"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -33,6 +41,7 @@ fi
 echo "=============================================================================="
 echo "[🔒] Personalizing & Hardening Lab 01 VM for Student ID: ${STUDENT_ID}"
 echo "=============================================================================="
+
 
 # Deterministic Flag Derivation
 FLAG_LFI=$(echo -n "${STUDENT_ID}_LFI_${SECRET_SALT}" | sha256sum | cut -c1-32)
