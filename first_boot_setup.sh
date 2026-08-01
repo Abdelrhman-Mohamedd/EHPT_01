@@ -112,6 +112,9 @@ if [ "$SETUP_EXIT" -eq 0 ]; then
     # Remove the GNOME autostart entry so this window never opens again
     rm -f "$AUTOSTART_DESKTOP" 2>/dev/null || true
 
+    # Self-delete this wizard script so it no longer appears in the student's file manager
+    rm -f /home/student/first_boot_setup.sh 2>/dev/null || true
+
     # ---- Success Dialog ----
     zenity --info \
         --title="Lab 01 Ready! 🎉" \
