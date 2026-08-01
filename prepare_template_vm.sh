@@ -40,6 +40,18 @@ gpasswd -d "$STUDENT_USER" sudo  2>/dev/null || true
 echo "${STUDENT_USER}:labpassword" | chpasswd
 echo "    Password set to: labpassword  (change this before distributing!)"
 
+# ---- Hide 'cyberlabs' instructor account from GDM login screen ----
+# Uses AccountsService SystemAccount=true — user still exists and is fully functional,
+# but GDM will not show it on the graphical login chooser.
+echo "[+] Step 1b: Hiding 'cyberlabs' from GDM login screen..."
+mkdir -p /var/lib/AccountsService/users/
+cat > /var/lib/AccountsService/users/cyberlabs << 'ACCT'
+[User]
+SystemAccount=true
+ACCT
+chmod 644 /var/lib/AccountsService/users/cyberlabs
+echo "    cyberlabs is now hidden from the GDM login screen (account still usable)."
+
 # ---- 2. Install zenity for GUI dialogs ----
 echo "[+] Step 2: Installing zenity (GUI dialog dependency)..."
 dnf install -y zenity >/dev/null 2>&1 && echo "    zenity installed." || echo "    [!] zenity install failed — check DNF."
@@ -89,6 +101,13 @@ X-GNOME-Autostart-Delay=3
 DESKTOP
 chown -R "${STUDENT_USER}:${STUDENT_USER}" "/home/${STUDENT_USER}/.config"
 echo "    GNOME autostart entry created — runs after desktop loads, not on login shell."
+
+# ---- Suppress GNOME Initial Setup 'Welcome to Rocky Linux' dialog ----
+# Creating gnome-initial-setup-done tells GNOME the setup wizard has already run.
+echo "[+] Step 5b: Suppressing GNOME Initial Setup welcome dialog..."
+touch "/home/${STUDENT_USER}/.config/gnome-initial-setup-done"
+chown "${STUDENT_USER}:${STUDENT_USER}" "/home/${STUDENT_USER}/.config/gnome-initial-setup-done"
+echo "    'Welcome to Rocky Linux' dialog will NOT appear on first login."
 
 # ---- 6. Configure Narrowly Scoped sudoers Rule (path updated to /opt/lab01-setup/) ----
 echo "[+] Step 6: Configuring restricted sudoers rule..."

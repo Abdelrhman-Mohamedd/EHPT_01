@@ -31,7 +31,8 @@ zenity --info \
     --text="<b>Welcome to Lab 01: NexaCorp Employee Portal</b>\n\nThis VM must be personalized using your unique <b>Student ID</b> before you can begin.\n\nClick <b>OK</b> to continue." \
     2>/dev/null || exit 1
 
-# ---- Student ID Input Loop ----
+# ---- Student ID Input + Confirmation Loop ----
+# "No" on confirmation sends the student back to re-enter their ID (does NOT exit)
 while true; do
     SID=$(zenity --entry \
         --title="Lab 01 — Student ID Required" \
@@ -40,7 +41,7 @@ while true; do
         --entry-text="" \
         2>/dev/null)
 
-    # Cancelled
+    # X / Cancel button pressed — abort entirely
     if [ $? -ne 0 ]; then
         zenity --warning --title="Lab 01 Setup" --width=380 \
             --text="Setup cancelled. Please log out and log back in to try again." \
@@ -62,15 +63,18 @@ while true; do
         continue
     fi
 
-    break
-done
+    # ---- Confirmation Dialog ----
+    zenity --question \
+        --title="Confirm Student ID" \
+        --width=420 \
+        --text="Your Student ID is:\n\n<b>${SID}</b>\n\nAre you sure this is correct?\n<small>This cannot be changed after confirming.</small>" \
+        2>/dev/null
 
-# ---- Confirmation Dialog ----
-zenity --question \
-    --title="Confirm Student ID" \
-    --width=420 \
-    --text="Your Student ID is:\n\n<b>${SID}</b>\n\nAre you sure this is correct?\n<small>This cannot be changed after confirming.</small>" \
-    2>/dev/null || exit 1
+    if [ $? -eq 0 ]; then
+        break   # "Yes" — proceed to provisioning
+    fi
+    # "No" — loop back and ask for the ID again
+done
 
 # ---- Progress: Run setup.sh in background, show progress bar ----
 (
