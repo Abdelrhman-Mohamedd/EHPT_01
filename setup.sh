@@ -134,16 +134,20 @@ chown -R root:lab01 /srv/labs/lab01
 
 # Permissions:
 # Root directory /srv/labs/lab01 MUST be 750 so apache (lab01 group) can traverse to public/
-chmod 750 /srv/labs/lab01 /srv/labs/lab01/public /srv/labs/lab01/data /srv/labs/lab01/sessions
+chmod 750 /srv/labs/lab01 /srv/labs/lab01/public /srv/labs/lab01/data
 chmod 700 /srv/labs/lab01/.buildinfo
 
-# ALL subdirectories inside public/ must be 750 so apache can traverse into assets/, assets/css/, etc.
-# (Without this, CSS/JS static files return 403 Forbidden)
+# ALL subdirectories inside public/ and data/ must be 750 so apache/PHP can traverse them
 find /srv/labs/lab01/public -type d -exec chmod 750 {} \;
+find /srv/labs/lab01/data -type d -exec chmod 750 {} \;
 
 # Files read-only for lab01 group, inaccessible to others (prevents direct shell access to flags)
 find /srv/labs/lab01/public -type f -not -path "*/uploads/*" -exec chmod 640 {} \;
 find /srv/labs/lab01/data -type f -exec chmod 640 {} \;
+
+# Writable directories (uploads & sessions) for lab01 process
+chown -R lab01:lab01 /srv/labs/lab01/sessions
+chmod 770 /srv/labs/lab01/sessions
 
 # Only public/uploads is writable by lab01 process
 chown -R lab01:lab01 /srv/labs/lab01/public/uploads
