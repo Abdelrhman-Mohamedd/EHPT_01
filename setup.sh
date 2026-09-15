@@ -228,14 +228,9 @@ echo "[+] Step 12: Reloading & restarting web services..."
 systemctl restart php-fpm || systemctl restart php8.3-fpm || systemctl restart php8.2-fpm || true
 systemctl restart httpd || systemctl restart apache2 || true
 
-# Production Purge Mode: Clean source repository, setup scripts, and instructor tools from VM image
-if [ "$IS_PRODUCTION" -eq 1 ]; then
-    echo "[+] Step 13: Executing Production Security Purge (Removing build scripts & salt tools)..."
-    rm -f "${SCRIPT_DIR}/setup.sh"
-    rm -f "${SCRIPT_DIR}/generate_student_flags.py"
-    rm -rf "${SCRIPT_DIR}/.git"
-    echo "    Purged setup.sh, generate_student_flags.py, and .git history from VM image."
-fi
+# NOTE: Production purge was removed. Since the lab re-provisions on every login,
+# setup.sh must persist in /opt/lab01-setup/. The student cannot access it anyway
+# (directory is root:root 700).
 
 echo "=============================================================================="
 echo "[🎉] Black-Box Appliance Lab 01 Provisioned & Hardened for ${STUDENT_ID}!"

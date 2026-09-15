@@ -75,7 +75,7 @@ done
     echo "# Provisioning lab environment for ${SID}..."
     echo "10"
 
-    sudo "$SETUP_SCRIPT" "$SID" --production > /tmp/lab01_setup.log 2>&1
+    sudo "$SETUP_SCRIPT" "$SID" > /tmp/lab01_setup.log 2>&1
     SETUP_EXIT=$?
 
     echo "90"
