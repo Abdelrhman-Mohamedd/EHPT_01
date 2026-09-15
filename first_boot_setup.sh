@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# first_boot_setup.sh — Student First-Boot Personalization Wizard (GUI Mode)
-# Triggered via GNOME autostart .desktop file (NOT .bash_profile).
+# first_boot_setup.sh — Student Personalization Wizard (GUI Mode)
+# Triggered via GNOME autostart .desktop file on EVERY login.
 # Uses zenity GUI dialogs — no raw terminal input required.
-# Removes its own autostart entry on success so it never runs again.
+# Re-provisions the lab each time the VM boots or the student logs in,
+# so the instructor can reuse one VM image for multiple students.
 # ==============================================================================
 
 # setup.sh lives in /opt/lab01-setup/ (root:root 700 — student cannot read or list it)
 # The secret salt is stored in /etc/lab01.conf (root:root 600 — student cannot read it)
 # This script only receives the Student ID from the user and passes it to sudo setup.sh
 SETUP_SCRIPT="/opt/lab01-setup/setup.sh"
-FIRST_BOOT_FLAG="/home/student/.lab01_provisioned"
-AUTOSTART_DESKTOP="/home/student/.config/autostart/lab01-setup.desktop"
-
-# ---- Guard: only run once ----
-if [ -f "$FIRST_BOOT_FLAG" ]; then
-    exit 0
-fi
 
 # ---- Dependency check ----
 if ! command -v zenity >/dev/null 2>&1; then
@@ -67,7 +61,7 @@ while true; do
     zenity --question \
         --title="Confirm Student ID" \
         --width=420 \
-        --text="Your Student ID is:\n\n<b>${SID}</b>\n\nAre you sure this is correct?\n<small>This cannot be changed after confirming.</small>" \
+        --text="Your Student ID is:\n\n<b>${SID}</b>\n\nAre you sure this is correct?" \
         2>/dev/null
 
     if [ $? -eq 0 ]; then
@@ -109,15 +103,6 @@ fi
 if [ "$SETUP_EXIT" -eq 0 ]; then
     # Detect VM IP for portal URL
     VM_IP=$(hostname -I | awk '{print $1}')
-
-    # Mark as provisioned — wizard will never run again
-    touch "$FIRST_BOOT_FLAG"
-
-    # Remove the GNOME autostart entry so this window never opens again
-    rm -f "$AUTOSTART_DESKTOP" 2>/dev/null || true
-
-    # Self-delete this wizard script so it no longer appears in the student's file manager
-    rm -f /home/student/first_boot_setup.sh 2>/dev/null || true
 
     # ---- Success Dialog ----
     zenity --info \
