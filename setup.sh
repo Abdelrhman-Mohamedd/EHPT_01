@@ -203,10 +203,11 @@ if [ -f /etc/sudoers.d/lab01-setup ]; then
         rm -f /etc/sudoers.d/lab01-setup
     fi
 fi
-# A-08: Remove unused /var/www/html
-if [ -d "/var/www/html" ] && [ ! -L "/var/www/html" ]; then
+# A-08: Symlink unused /var/www/html to actual webroot (prevents Apache global config crash)
+if [ ! -L "/var/www/html" ]; then
     rm -rf /var/www/html
-    echo "    Removed unused /var/www/html directory"
+    ln -s /srv/labs/lab01/public /var/www/html
+    echo "    Symlinked /var/www/html to actual webroot"
 fi
 
 echo "[+] Step 13: Reloading & restarting web services..."

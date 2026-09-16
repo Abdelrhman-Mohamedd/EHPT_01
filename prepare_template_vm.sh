@@ -163,20 +163,43 @@ echo "[+] Step 9: Locking root password..."
 passwd -l root
 echo "    Root account locked. Only sudo via sudoers rule is possible."
 
-# ---- A-08: Remove unused /var/www/html ----
-echo "[+] Step 9b: Cleaning up stale web directories (A-08)..."
-if [ -d "/var/www/html" ] && [ ! -L "/var/www/html" ]; then
+# ---- A-08: Symlink unused /var/www/html ----
+echo "[+] Step 9b: Symlinking stale web directory (A-08)..."
+if [ ! -L "/var/www/html" ]; then
     rm -rf /var/www/html
-    echo "    Removed unused /var/www/html directory"
+    ln -s /srv/labs/lab01/public /var/www/html 2>/dev/null || mkdir -p /var/www/html
+    echo "    Symlinked /var/www/html to lab01 webroot"
 fi
 
-# ---- A-09: Configure firewall ----
-echo "[+] Step 9c: Configuring firewall for network isolation (A-09)..."
+# ---- A-09: Network isolation — NO internet access for students ----
+echo "[+] Step 9c: Configuring firewall — blocking internet egress (A-09)..."
 if command -v firewall-cmd >/dev/null 2>&1; then
     firewall-cmd --permanent --add-port=8081/tcp 2>/dev/null || true
+
+    # Clear previous direct rules
+    firewall-cmd --permanent --direct --remove-all-rules 2>/dev/null || true
+
+    # Allow outbound to private subnets (RFC1918) and loopback, block everything else
+    firewall-cmd --permanent --direct --add-rule ipv4 filter OUTPUT 0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+    firewall-cmd --permanent --direct --add-rule ipv4 filter OUTPUT 1 -d 127.0.0.0/8 -j ACCEPT
+    firewall-cmd --permanent --direct --add-rule ipv4 filter OUTPUT 2 -d 10.0.0.0/8 -j ACCEPT
+    firewall-cmd --permanent --direct --add-rule ipv4 filter OUTPUT 3 -d 172.16.0.0/12 -j ACCEPT
+    firewall-cmd --permanent --direct --add-rule ipv4 filter OUTPUT 4 -d 192.168.0.0/16 -j ACCEPT
+    firewall-cmd --permanent --direct --add-rule ipv4 filter OUTPUT 99 -j REJECT
+
     firewall-cmd --reload 2>/dev/null || true
-    echo "    Firewall: port 8081/tcp open"
+    echo "    Firewall: port 8081/tcp inbound OPEN"
+    echo "    Firewall: ALL outbound internet traffic BLOCKED (RFC1918 allowed)"
 fi
+
+# ---- A-09 (Part 2): DNS Blackhole ----
+echo "[+] Step 9d: Configuring DNS Blackhole (Defense in Depth)..."
+# Remove existing resolver and point to nowhere
+rm -f /etc/resolv.conf
+echo "nameserver 127.0.0.1" > /etc/resolv.conf
+# Lock the file so NetworkManager/DHCP cannot overwrite it
+chattr +i /etc/resolv.conf 2>/dev/null || true
+echo "    DNS locked to 127.0.0.1. External name resolution is BLOCKED."
 
 # ---- Summary ----
 echo "=============================================================================="
