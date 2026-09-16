@@ -82,6 +82,8 @@ echo "[+] Step 3: Storing secret salt in /etc/lab01.conf (root-only)..."
 echo "${SECRET_SALT}" > /etc/lab01.conf
 chown root:root /etc/lab01.conf
 chmod 600 /etc/lab01.conf
+# Note: setup.sh will change to root:lab01 640 after creating the lab01 user,
+# so that PHP-FPM (running as lab01) can read the salt for dynamic flag generation.
 echo "    Salt stored at /etc/lab01.conf  (mode: 600 — student access: DENIED)"
 
 # ---- 4. Clone EHPT_01 repo to /opt/lab01-setup/ (outside student home, root-only) ----
@@ -160,6 +162,21 @@ BANNER
 echo "[+] Step 9: Locking root password..."
 passwd -l root
 echo "    Root account locked. Only sudo via sudoers rule is possible."
+
+# ---- A-08: Remove unused /var/www/html ----
+echo "[+] Step 9b: Cleaning up stale web directories (A-08)..."
+if [ -d "/var/www/html" ] && [ ! -L "/var/www/html" ]; then
+    rm -rf /var/www/html
+    echo "    Removed unused /var/www/html directory"
+fi
+
+# ---- A-09: Configure firewall ----
+echo "[+] Step 9c: Configuring firewall for network isolation (A-09)..."
+if command -v firewall-cmd >/dev/null 2>&1; then
+    firewall-cmd --permanent --add-port=8081/tcp 2>/dev/null || true
+    firewall-cmd --reload 2>/dev/null || true
+    echo "    Firewall: port 8081/tcp open"
+fi
 
 # ---- Summary ----
 echo "=============================================================================="

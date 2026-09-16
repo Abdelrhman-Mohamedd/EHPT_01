@@ -13,7 +13,7 @@ include('header.php');
     <div class="card">
         <div class="card-title">
             <span>📡 Network Ping Utility</span>
-            <small style="color:var(--accent-emerald); font-size:0.8rem; font-weight:normal;">Direct ICMP</small>
+            <small style="color:var(--accent-emerald); font-size:0.8rem; font-weight:normal;">Active</small>
         </div>
         <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.25rem;">
             Send ICMP Echo requests to verify connectivity to external gateways or internal lab subnets.
@@ -34,7 +34,7 @@ include('header.php');
     <div class="card">
         <div class="card-title">
             <span>⚙️ Remote Config Template Loader</span>
-            <small style="color:var(--accent-cyan); font-size:0.8rem; font-weight:normal;">Dynamic Include</small>
+            <small style="color:var(--accent-cyan); font-size:0.8rem; font-weight:normal;">Available</small>
         </div>
         <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.25rem;">
             Load pre-built network templates or remote operational profiles into the diagnostic viewer.
@@ -49,17 +49,6 @@ include('header.php');
                 Load Config Template &rarr;
             </button>
         </form>
-    </div>
-</div>
-
-<div class="card" style="margin-top:1.5rem;">
-    <div class="card-title">
-        <span>📋 System Diagnostics Log</span>
-    </div>
-    <div style="font-family:monospace; font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
-        [08:12:04] Pool lab01 initialized on socket /run/php-fpm/lab01.sock<br>
-        [08:14:22] ping process executed by user lab01 (pid 4102)<br>
-        [08:15:00] Template loader requested default.php - HTTP 200 OK
     </div>
 </div>
 

@@ -18,21 +18,21 @@
 
 ## 🏢 Scenario
 
-You have been hired as a Junior Penetration Tester by **NexaCorp**. Your first assignment is to perform a security assessment of their new internal Employee Portal before it goes live to the entire company. 
+You have been hired as a Junior Penetration Tester by **NexaCorp**. Your first assignment is to perform a security assessment of their new internal Employee Portal before it goes live to the entire company.
 
-The developers claim the portal is "secure by design," but your manager suspects they have introduced several classic web vulnerabilities. Your objective is to compromise the portal, locate the hidden flags, and document your findings.
+The developers claim the portal is "secure by design," but your manager suspects otherwise. Your objective is to **identify and exploit security vulnerabilities** hidden within the normal features of the portal, locate the hidden verification flags, and document your findings in a professional penetration testing report.
 
 ---
 
 ## 🎯 Lab Objectives
 
-You must identify, exploit, and document **five** specific vulnerability classes hidden within the normal features of the portal.
+You must identify, exploit, and document **five (5) distinct security vulnerabilities** hidden within the portal's features. Each successful exploitation will reveal a unique `FLAG{...}` verification token bound to your Student ID.
 
 <table style="width: 100%; border-collapse: collapse;">
   <thead>
     <tr style="background-color: #34495e; color: white;">
       <th style="padding: 10px; border: 1px solid #bdc3c7;">#</th>
-      <th style="padding: 10px; border: 1px solid #bdc3c7;">Vulnerability</th>
+      <th style="padding: 10px; border: 1px solid #bdc3c7;">Category</th>
       <th style="padding: 10px; border: 1px solid #bdc3c7;">Flag Format</th>
       <th style="padding: 10px; border: 1px solid #bdc3c7;">Points</th>
     </tr>
@@ -40,31 +40,31 @@ You must identify, exploit, and document **five** specific vulnerability classes
   <tbody>
     <tr>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">1</td>
-      <td style="padding: 10px; border: 1px solid #bdc3c7;"><strong>Local File Inclusion (LFI)</strong></td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Vulnerability A</td>
       <td style="padding: 10px; border: 1px solid #bdc3c7;"><code>FLAG{...}</code></td>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">20</td>
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">2</td>
-      <td style="padding: 10px; border: 1px solid #bdc3c7;"><strong>Remote File Inclusion (RFI)</strong></td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Vulnerability B</td>
       <td style="padding: 10px; border: 1px solid #bdc3c7;"><code>FLAG{...}</code></td>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">20</td>
     </tr>
     <tr>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">3</td>
-      <td style="padding: 10px; border: 1px solid #bdc3c7;"><strong>Path Traversal</strong></td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Vulnerability C</td>
       <td style="padding: 10px; border: 1px solid #bdc3c7;"><code>FLAG{...}</code></td>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">20</td>
     </tr>
     <tr style="background-color: #f9f9f9;">
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">4</td>
-      <td style="padding: 10px; border: 1px solid #bdc3c7;"><strong>Unrestricted File Upload</strong></td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Vulnerability D</td>
       <td style="padding: 10px; border: 1px solid #bdc3c7;"><code>FLAG{...}</code></td>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">20</td>
     </tr>
     <tr>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">5</td>
-      <td style="padding: 10px; border: 1px solid #bdc3c7;"><strong>Command Injection</strong></td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Vulnerability E</td>
       <td style="padding: 10px; border: 1px solid #bdc3c7;"><code>FLAG{...}</code></td>
       <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center;">20</td>
     </tr>
@@ -73,45 +73,95 @@ You must identify, exploit, and document **five** specific vulnerability classes
 
 ---
 
-## 🛠️ Methodology & Hints
+## 🛠️ Methodology
+
+Approach this assessment as you would a real-world penetration test:
 
 <div style="display: flex; flex-wrap: wrap; gap: 15px;">
 
 <div style="flex: 1; min-width: 300px; background-color: #fdfefe; border: 1px solid #dcdde1; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-  <h4 style="color: #2980b9; margin-top: 0;">🔍 1. Reconnaissance</h4>
-  <p>Start by clicking around the portal like a normal user. Pay close attention to the URLs. Are there any parameters passing file names or URLs? (e.g., <code>?page=</code>, <code>?doc=</code>, <code>?template=</code>).</p>
+  <h4 style="color: #2980b9; margin-top: 0;">🔍 1. Reconnaissance & Enumeration</h4>
+  <p>Explore the portal like a legitimate user. Map out all pages, features, forms, and interactive elements. Take note of how the application handles user input and how data flows between the browser and server. Examine URLs, request parameters, and response headers carefully.</p>
 </div>
 
 <div style="flex: 1; min-width: 300px; background-color: #fdfefe; border: 1px solid #dcdde1; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-  <h4 style="color: #27ae60; margin-top: 0;">📂 2. File Inclusion & Traversal</h4>
-  <p>If the application reads files from the server, try to break out of the intended directory using <code>../</code>. Can you read <code>/etc/passwd</code>? Can you include an external URL to execute code?</p>
+  <h4 style="color: #27ae60; margin-top: 0;">🧪 2. Testing & Exploitation</h4>
+  <p>Based on your reconnaissance findings, identify inputs that interact with server-side resources. Test each input for improper validation, unsafe handling, and unexpected behaviors. Think about what the server might be doing with your input behind the scenes.</p>
 </div>
 
 <div style="flex: 1; min-width: 300px; background-color: #fdfefe; border: 1px solid #dcdde1; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-  <h4 style="color: #8e44ad; margin-top: 0;">📤 3. File Uploads</h4>
-  <p>The HR portal accepts resumes. What happens if you upload a PHP script instead of a PDF? Where does the file go? Can you access it directly via the browser?</p>
+  <h4 style="color: #8e44ad; margin-top: 0;">🏁 3. Flag Collection</h4>
+  <p>When you successfully exploit a vulnerability, a unique <code>FLAG{...}</code> token will appear in the server's response. Record each flag carefully — each one proves you understood and executed a specific attack technique.</p>
 </div>
 
 <div style="flex: 1; min-width: 300px; background-color: #fdfefe; border: 1px solid #dcdde1; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-  <h4 style="color: #f39c12; margin-top: 0;">⚙️ 4. Command Injection</h4>
-  <p>Look for administrative or IT tools that interact with the underlying operating system (like ping or traceroute). Can you append additional bash commands using <code>;</code> or <code>&&</code>?</p>
+  <h4 style="color: #f39c12; margin-top: 0;">📝 4. Documentation</h4>
+  <p>Document every finding as you go. A vulnerability without documentation is a vulnerability not found. Your report is graded on methodology, not just flags.</p>
 </div>
 
 </div>
 
 ---
 
-## 📝 Reporting Rubric
+## 💡 Tiered Hint System
 
-Your final submission must be a professional penetration testing report. Submitting just the flags is not enough; you must prove **how** you obtained them.
+If you are stuck, you may request hints from your instructor. Each tier provides progressively more detail but incurs a **point deduction** from your final score.
+
+<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+  <thead>
+    <tr style="background-color: #34495e; color: white;">
+      <th style="padding: 10px; border: 1px solid #bdc3c7;">Tier</th>
+      <th style="padding: 10px; border: 1px solid #bdc3c7;">Level of Detail</th>
+      <th style="padding: 10px; border: 1px solid #bdc3c7;">Deduction</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center; font-weight: bold;">Tier 1</td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">General category nudge — tells you what <em>type</em> of weakness to look for</td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center; color: #e67e22;">−2 pts</td>
+    </tr>
+    <tr style="background-color: #f9f9f9;">
+      <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center; font-weight: bold;">Tier 2</td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Narrows to a specific portal component or feature area</td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center; color: #e74c3c;">−5 pts</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center; font-weight: bold;">Tier 3</td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7;">Full technique and payload guidance</td>
+      <td style="padding: 10px; border: 1px solid #bdc3c7; text-align: center; color: #c0392b;">−10 pts</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="color: #7f8c8d; font-size: 0.85rem; margin-top: 10px;"><em>Hints are cumulative per vulnerability. Requesting all three tiers for one vulnerability costs −17 pts total for that finding.</em></p>
+
+---
+
+## 📝 Report Requirements
+
+Your final submission must be a **professional penetration testing report**. Submitting just the flags is not enough; you must prove **how** you obtained them.
 
 For **each** vulnerability, your report must include:
 
-1. **Vulnerability Type & Location:** (e.g., "Command Injection in IT Tools page via the `ip` parameter").
+1. **Vulnerability Type & Location:** The class of vulnerability and where you found it in the application.
 2. **Exploit Payload:** The exact URL, parameter, or HTTP request used to trigger the vulnerability.
 3. **Step-by-Step Reproduction:** Clear instructions so the developers can reproduce the issue.
-4. **Proof of Concept (PoC):** A screenshot showing the successful exploit and the visible `FLAG{...}`.
-5. **Remediation Recommendation:** A brief explanation of how to fix the vulnerability in PHP (e.g., "Use `escapeshellarg()`" or "Disable remote URL includes in `php.ini`").
+4. **Proof of Concept (PoC):** An uncropped screenshot showing the successful exploit and the visible `FLAG{...}` token. The screenshot must show your assigned Student ID (visible in the portal header/footer) or your VM hostname in the terminal prompt.
+5. **Root Cause Analysis:** Explain *why* this vulnerability exists — what mistake did the developer make?
+6. **Remediation Recommendation:** A brief explanation of how to fix the vulnerability (code fix, configuration change, or architectural improvement).
+
+---
+
+## 📊 Grading Summary
+
+| Category | Points |
+| :--- | :---: |
+| Executive Summary & Methodology | 15 pts |
+| Vulnerability Findings & PoCs (5 × 10 pts) | 50 pts |
+| Root Cause Analysis | 15 pts |
+| Remediation & Hardening Recommendations | 20 pts |
+| **Total** | **100 pts** |
 
 <br>
 

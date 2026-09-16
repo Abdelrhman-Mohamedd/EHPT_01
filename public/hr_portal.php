@@ -47,7 +47,7 @@ include('header.php');
         <ul style="color:var(--text-muted); font-size:0.9rem; margin-left:1.2rem; line-height:1.7;">
             <li>All files uploaded will be assigned to your HR profile folder.</li>
             <li>Make sure your document filename matches standard corporate naming conventions (e.g. <code>John_Smith_Resume.pdf</code>).</li>
-            <li>Files are saved to the internal server storage directory <code>/srv/labs/lab01/uploads/</code> for reviewer auditing.</li>
+            <li>Files are saved to a secure internal storage directory for reviewer auditing.</li>
             <li>Maximum allowable file size per upload: 10MB.</li>
         </ul>
 
